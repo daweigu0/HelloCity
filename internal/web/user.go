@@ -4,8 +4,8 @@ import (
 	"HelloCity/internal/service"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"log"
 	"github.com/google/go-querystring/query"
+	"log"
 	"net/http"
 )
 
@@ -18,10 +18,12 @@ func NewUserHandler(svc service.UserService) *UserHandler {
 		UserService: svc,
 	}
 }
+
 func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("login", u.Login)
 }
+
 func (u *UserHandler) Login(ctx *gin.Context) {
 	type Req struct {
 		Code string `json:"code"`
@@ -34,20 +36,14 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		JsCode: req.Code,
 	}
 	code2SessionResponse := u.code2Session(&code2SessionReqParams)
-	//下面逻辑需要继续完善
-	if code2SessionResponse.SessionKey == "" {
-
-	}
-	us, err := u.UserService.Login(ctx, req.Code)
+	us, err := u.UserService.Login(ctx.Request.Context(), code2SessionResponse.OpenId)
+	//下面要生成token返回
 	if err != nil {
 		ctx.String(http.StatusOK, "登录失败")
 		return
 	}
 	log.Println("us:", us)
-	ctx.String(http.StatusOK, "登录成功")
-}
-func (u *UserHandler) Hello(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "hello world")
+	ctx.String(http.StatusOK, "token")
 }
 
 type Code2SessionReqParams struct {
