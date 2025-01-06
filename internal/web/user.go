@@ -2,7 +2,9 @@ package web
 
 import (
 	"HelloCity/internal/service"
+	"HelloCity/internal/utils"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-querystring/query"
@@ -32,25 +34,31 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
+	viper := utils.CreateConfig("config")
+	prefix := "wechat."
+	appid := viper.GetString(prefix + "appid")
+	secret := viper.GetString(prefix + "secret")
 	code2SessionReqParams := Code2SessionReqParams{
-		JsCode: req.Code,
+		JsCode:    req.Code,
+		Appid:     appid,
+		Secret:    secret,
+		GrantType: "authorization_code",
 	}
 	code2SessionResponse := u.code2Session(&code2SessionReqParams)
-	//下面逻辑需要继续完善
-	if code2SessionResponse.SessionKey == "" {
-
+	if code2SessionResponse.ErrCode != 0 {
+		ctx.String(http.StatusOK, "登录失败")
+		log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
+		return
 	}
-	us, err := u.UserService.Login(ctx, req.Code)
+	us, err := u.UserService.Login(ctx, code2SessionResponse.OpenId)
 	if err != nil {
 		ctx.String(http.StatusOK, "登录失败")
 		return
 	}
 	log.Println("us:", us)
-	//ssid := uuid.New().String()
 	rc := UserClaims{
 		Uid:       us.Uid,
 		UserAgent: ctx.GetHeader("User-Agent"),
-		//Ssid: ssid,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
 		},
@@ -63,9 +71,6 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	ctx.Header("x-jwt-token", tokenString)
 	ctx.String(http.StatusOK, "登录成功")
-}
-func (u *UserHandler) Hello(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "hello world")
 }
 
 type Code2SessionReqParams struct {
