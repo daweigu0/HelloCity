@@ -4,9 +4,11 @@ import (
 	"HelloCity/internal/service"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"log"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-querystring/query"
+	"log"
 	"net/http"
+	"time"
 )
 
 type UserHandler struct {
