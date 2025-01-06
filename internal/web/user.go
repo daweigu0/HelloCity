@@ -4,9 +4,11 @@ import (
 	"HelloCity/internal/service"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"log"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-querystring/query"
+	"log"
 	"net/http"
+	"time"
 )
 
 type UserHandler struct {
@@ -44,6 +46,22 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 	log.Println("us:", us)
+	//ssid := uuid.New().String()
+	rc := UserClaims{
+		Uid:       us.Uid,
+		UserAgent: ctx.GetHeader("User-Agent"),
+		//Ssid: ssid,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodES512, rc)
+	tokenString, err := token.SignedString(JWTKey)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	ctx.Header("x-jwt-token", tokenString)
 	ctx.String(http.StatusOK, "登录成功")
 }
 func (u *UserHandler) Hello(ctx *gin.Context) {
@@ -56,6 +74,11 @@ type Code2SessionReqParams struct {
 	JsCode    string `url:"js_code"`
 	GrantType string `url:"grant_type"`
 }
+type UserClaims struct {
+	jwt.RegisteredClaims
+	Uid       uint64
+	UserAgent string
+}
 
 type Code2SessionResponse struct {
 	SessionKey string `json:"session_key"`
@@ -64,6 +87,8 @@ type Code2SessionResponse struct {
 	OpenId     string `json:"openid"`
 	ErrCode    int32  `json:"errcode"`
 }
+
+var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgA")
 
 func (u *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2SessionResponse {
 	url := "https://api.weixin.qq.com/sns/jscode2session?"
