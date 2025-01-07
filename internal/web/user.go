@@ -41,8 +41,8 @@ type loginReq struct {
 // @Produce      json
 // @Param code body loginReq true "微信登录的临时登录凭证"
 // @Success 200 {object} ginx.Result "登录成功"
-// @Failure 401001 {object} ginx.Result "请求数据有误"
-// @Failure 501001 {object} ginx.Result "登录失败"
+// @Failure 200 {object} ginx.Result "请求数据有误"
+// @Failure 200 {object} ginx.Result "登录失败"
 // @Router /users/login [post]
 func (u *UserHandler) Login(ctx *gin.Context) {
 	var req loginReq
@@ -103,7 +103,7 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	ctx.Header("x-jwt-token", tokenString)
 	ctx.JSON(http.StatusOK, ginx.Result{
-		Code: 200,
+		Code: http.StatusOK,
 		Msg:  "登录成功",
 	})
 }
