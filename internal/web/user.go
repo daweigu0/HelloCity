@@ -47,8 +47,9 @@ type loginReq struct {
 func (u *UserHandler) Login(ctx *gin.Context) {
 	var req loginReq
 	if err := ctx.Bind(&req); err != nil {
-		ctx.JSON(errs.UserInvalidInput, ginx.Result{
-			Msg: "请求数据有误",
+		ctx.JSON(http.StatusOK, ginx.Result{
+			Code: errs.UserInvalidInput,
+			Msg:  "请求数据有误",
 		})
 		return
 	}
@@ -64,8 +65,9 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	code2SessionResponse := u.code2Session(&code2SessionReqParams)
 	if code2SessionResponse == nil || code2SessionResponse.ErrCode != 0 {
-		ctx.JSON(errs.UserInternalServerError, ginx.Result{
-			Msg: "登录失败",
+		ctx.JSON(http.StatusOK, ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "登录失败",
 		})
 		if code2SessionResponse != nil {
 			log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
@@ -76,8 +78,9 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	us, err := u.UserService.Login(ctx, code2SessionResponse.OpenId)
 	if err != nil {
-		ctx.JSON(errs.UserInternalServerError, ginx.Result{
-			Msg: "登录失败",
+		ctx.JSON(http.StatusOK, ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "登录失败",
 		})
 		return
 	}
@@ -92,14 +95,16 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, rc)
 	tokenString, err := token.SignedString(JWTKey)
 	if err != nil {
-		ctx.JSON(errs.UserInternalServerError, ginx.Result{
-			Msg: "系统异常",
+		ctx.JSON(http.StatusOK, ginx.Result{
+			Code: errs.UserInternalServerError,
+			Msg:  "系统异常",
 		})
 		return
 	}
 	ctx.Header("x-jwt-token", tokenString)
 	ctx.JSON(http.StatusOK, ginx.Result{
-		Msg: "登录成功",
+		Code: 200,
+		Msg:  "登录成功",
 	})
 }
 
