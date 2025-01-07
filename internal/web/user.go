@@ -82,7 +82,12 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 	ctx.Header("x-jwt-token", tokenString)
-	ctx.String(http.StatusOK, "登录成功")
+	ctx.JSON(http.StatusOK, ginx.Result{
+		Msg: "登录成功",
+		Data: map[string]interface{}{
+			"token": tokenString,
+		},
+	})
 }
 
 type Code2SessionReqParams struct {
