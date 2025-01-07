@@ -28,15 +28,27 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("login", u.Login)
 }
-func (u *UserHandler) Login(ctx *gin.Context) {
-	type Req struct {
-		Code string `json:"code"`
-	}
-	var req Req
 
+type loginReq struct {
+	Code string `json:"code"`
+}
+
+// 登录注册接口
+// @Tags 用户相关接口
+// @Summary 用户登录注册接口
+// @Description  登录成功返回的token放在响应的header的x-jwt-token里面，登录之后的后续访问需要带上token，放在请求的header里面的Authorization。
+// @Accept       json
+// @Produce      json
+// @Param code body loginReq true "微信登录的临时登录凭证"
+// @Success 200 {object} ginx.Result "登录成功"
+// @Failure 401001 {object} ginx.Result "请求数据有误"
+// @Failure 501001 {object} ginx.Result "登录失败"
+// @Router /users/login [post]
+func (u *UserHandler) Login(ctx *gin.Context) {
+	var req loginReq
 	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(errs.UserInvalidInput, ginx.Result{
-			Msg: "输入有误",
+			Msg: "请求数据有误",
 		})
 		return
 	}
@@ -51,11 +63,15 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		GrantType: "authorization_code",
 	}
 	code2SessionResponse := u.code2Session(&code2SessionReqParams)
-	if code2SessionResponse.ErrCode != 0 {
+	if code2SessionResponse == nil || code2SessionResponse.ErrCode != 0 {
 		ctx.JSON(errs.UserInternalServerError, ginx.Result{
 			Msg: "登录失败",
 		})
-		log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
+		if code2SessionResponse != nil {
+			log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
+		} else {
+			log.Println("请求微信code2Session接口失败")
+		}
 		return
 	}
 	us, err := u.UserService.Login(ctx, code2SessionResponse.OpenId)
@@ -84,9 +100,6 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	ctx.Header("x-jwt-token", tokenString)
 	ctx.JSON(http.StatusOK, ginx.Result{
 		Msg: "登录成功",
-		Data: map[string]interface{}{
-			"token": tokenString,
-		},
 	})
 }
 
@@ -121,17 +134,16 @@ func (u *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2Sessi
 	url += v.Encode()
 	resp, err := http.Get(url)
 	if err != nil {
+		log.Println(fmt.Sprintf("请求code2Session接口失败，%v", err))
 		return nil
 	}
-	var data []byte
-	_, err = resp.Body.Read(data)
+	defer resp.Body.Close() // 确保在函数退出时关闭响应体
+	var data Code2SessionResponse
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&data)
 	if err != nil {
+		log.Println(fmt.Sprintf("解析json数据错误，%v", err))
 		return nil
 	}
-	code2SessionResponse := new(Code2SessionResponse)
-	err = json.Unmarshal(data, code2SessionResponse)
-	if err != nil {
-		return nil
-	}
-	return code2SessionResponse
+	return &data
 }

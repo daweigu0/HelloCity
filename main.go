@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "HelloCity/docs"
 	"HelloCity/internal/repository"
 	"HelloCity/internal/repository/dao"
 	"HelloCity/internal/service"
@@ -9,14 +10,21 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 )
 
+// @title           你好同城后端API
+// @accept json
+// @produce json
+// @schemes http https
 func main() {
 	server := gin.Default()
+	server.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	usDao := dao.NewUserDAO(ioc.InitDB())
 	usRepo := repository.NewUserRepositoryHandler(usDao)
 	usSvc := service.NewUserServiceHandler(usRepo)
