@@ -1,6 +1,8 @@
 package web
 
 import (
+	"HelloCity/ginx"
+	"HelloCity/internal/errs"
 	"HelloCity/internal/service"
 	"HelloCity/internal/utils"
 	"encoding/json"
@@ -31,7 +33,11 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		Code string `json:"code"`
 	}
 	var req Req
+
 	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(errs.UserInvalidInput, ginx.Result{
+			Msg: "输入有误",
+		})
 		return
 	}
 	viper := utils.CreateConfig("config")
@@ -46,13 +52,17 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	code2SessionResponse := u.code2Session(&code2SessionReqParams)
 	if code2SessionResponse.ErrCode != 0 {
-		ctx.String(http.StatusOK, "登录失败")
+		ctx.JSON(errs.UserInternalServerError, ginx.Result{
+			Msg: "登录失败",
+		})
 		log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
 		return
 	}
 	us, err := u.UserService.Login(ctx, code2SessionResponse.OpenId)
 	if err != nil {
-		ctx.String(http.StatusOK, "登录失败")
+		ctx.JSON(errs.UserInternalServerError, ginx.Result{
+			Msg: "登录失败",
+		})
 		return
 	}
 	log.Println("us:", us)
@@ -66,7 +76,9 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, rc)
 	tokenString, err := token.SignedString(JWTKey)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统异常")
+		ctx.JSON(errs.UserInternalServerError, ginx.Result{
+			Msg: "系统异常",
+		})
 		return
 	}
 	ctx.Header("x-jwt-token", tokenString)
