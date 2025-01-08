@@ -36,20 +36,18 @@ type loginReq struct {
 // 登录注册接口
 // @Tags 用户相关接口
 // @Summary 用户登录注册接口
-// @Description  登录成功返回的token放在响应的header的x-jwt-token里面，登录之后的后续访问需要带上token，放在请求的header里面的Authorization。
-// @Accept       json
-// @Produce      json
-// @Param code body loginReq true "微信登录的临时登录凭证"
-// @Success 200 {object} ginx.Result "登录成功"
-// @Failure 200 {object} ginx.Result "请求数据有误"
-// @Failure 200 {object} ginx.Result "登录失败"
+// @Description	登录成功返回的token放在响应的header的x-jwt-token里面，登录之后的后续访问需要带上token，放在请求的header里面的Authorization。
+// @Accept json
+// @Produce json
+// @Param code	body loginReq true "微信登录的临时登录凭证"
+// @Success 200 {object} ginx.Result "{"code":xxx,"data":{},"msg":"xxx"}"
 // @Router /users/login [post]
 func (u *UserHandler) Login(ctx *gin.Context) {
 	var req loginReq
 	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(http.StatusOK, ginx.Result{
 			Code: errs.UserInvalidInput,
-			Msg:  "请求数据有误",
+			Msg:  "登录失败",
 		})
 		return
 	}
@@ -105,6 +103,9 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, ginx.Result{
 		Code: http.StatusOK,
 		Msg:  "登录成功",
+		Data: gin.H{
+			"token": tokenString,
+		},
 	})
 }
 

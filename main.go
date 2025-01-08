@@ -18,10 +18,10 @@ import (
 	"time"
 )
 
-// @title           你好同城后端API
-// @accept json
-// @produce json
-// @schemes http https
+// @title		你好同城后端API
+// @accept		json
+// @produce	json
+// @schemes	http https
 func main() {
 	server := gin.Default()
 	server.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

@@ -3,6 +3,8 @@ consumes:
 definitions:
   ginx.Result:
     properties:
+      code:
+        type: integer
       data: {}
       msg:
         type: string
@@ -32,15 +34,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 登录成功
-          schema:
-            $ref: '#/definitions/ginx.Result'
-        "401001":
-          description: 请求数据有误
-          schema:
-            $ref: '#/definitions/ginx.Result'
-        "501001":
-          description: 登录失败
+          description: '{"code":xxx,"data":{},"msg":"xxx"}'
           schema:
             $ref: '#/definitions/ginx.Result'
       summary: 用户登录注册接口

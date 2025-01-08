@@ -47,19 +47,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "登录成功",
-                        "schema": {
-                            "$ref": "#/definitions/ginx.Result"
-                        }
-                    },
-                    "401001": {
-                        "description": "请求数据有误",
-                        "schema": {
-                            "$ref": "#/definitions/ginx.Result"
-                        }
-                    },
-                    "501001": {
-                        "description": "登录失败",
+                        "description": "{\"code\":xxx,\"data\":{},\"msg\":\"xxx\"}",
                         "schema": {
                             "$ref": "#/definitions/ginx.Result"
                         }
@@ -72,6 +60,9 @@ const docTemplate = `{
         "ginx.Result": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "integer"
+                },
                 "data": {},
                 "msg": {
                     "type": "string"
