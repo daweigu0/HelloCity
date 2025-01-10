@@ -1,6 +1,10 @@
 package domain
 
 type User struct {
-	Uid    uint64
-	OpenId string
+	ID       uint64
+	OpenID   string
+	Mobile   string
+	NickName string
+	Avatar   string
+	Gender   string
 }

@@ -1,10 +1,11 @@
 package web
 
 import (
-	"HelloCity/ginx"
-	"HelloCity/internal/errs"
+	"HelloCity/internal/domain"
+	"HelloCity/internal/global/consts"
 	"HelloCity/internal/service"
 	"HelloCity/internal/utils"
+	"HelloCity/internal/utils/response"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -16,39 +17,37 @@ import (
 )
 
 type UserHandler struct {
-	UserService service.UserService
+	svc service.UserService
 }
 
 func NewUserHandler(svc service.UserService) *UserHandler {
 	return &UserHandler{
-		UserService: svc,
+		svc: svc,
 	}
 }
-func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
+func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
-	ug.POST("login", u.Login)
+	ug.POST("login", h.Login)
+	ug.POST("signup", h.SignUp)
 }
 
 type loginReq struct {
 	Code string `json:"code"`
 }
 
-// 登录注册接口
+// 登录接口
 // @Tags 用户相关接口
-// @Summary 用户登录注册接口
+// @Summary 用户登录接口
 // @Description	登录成功返回的token放在响应的header的x-jwt-token里面，登录之后的后续访问需要带上token，放在请求的header里面的Authorization。
 // @Accept json
 // @Produce json
-// @Param code	body loginReq true "微信登录的临时登录凭证"
+// @Param login body loginReq true "微信登录的临时登录凭证"
 // @Success 200 {object} ginx.Result "{"code":xxx,"data":{},"msg":"xxx"}"
 // @Router /users/login [post]
-func (u *UserHandler) Login(ctx *gin.Context) {
+func (h *UserHandler) Login(ctx *gin.Context) {
 	var req loginReq
 	if err := ctx.Bind(&req); err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
-			Code: errs.UserInvalidInput,
-			Msg:  "登录失败",
-		})
+		response.ErrorParam(ctx, err)
 		return
 	}
 	viper := utils.CreateConfig("config")
@@ -61,12 +60,9 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		Secret:    secret,
 		GrantType: "authorization_code",
 	}
-	code2SessionResponse := u.code2Session(&code2SessionReqParams)
+	code2SessionResponse := h.code2Session(&code2SessionReqParams)
 	if code2SessionResponse == nil || code2SessionResponse.ErrCode != 0 {
-		ctx.JSON(http.StatusOK, ginx.Result{
-			Code: errs.UserInternalServerError,
-			Msg:  "登录失败",
-		})
+		response.Fail(ctx, consts.CurdLoginFailCode, consts.CurdLoginFailMsg, nil)
 		if code2SessionResponse != nil {
 			log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
 		} else {
@@ -74,17 +70,20 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		}
 		return
 	}
-	us, err := u.UserService.Login(ctx, code2SessionResponse.OpenId)
-	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
-			Code: errs.UserInternalServerError,
-			Msg:  "登录失败",
+	us, err := h.svc.Login(ctx, code2SessionResponse.OpenId)
+	if err == service.ErrInvalidUser {
+		response.Fail(ctx, consts.CurdLoginFailCode, consts.CurdLoginFailMsg+",用户不存在，请注册", gin.H{
+			"openId": code2SessionResponse.OpenId,
 		})
+		return
+	}
+	if err != nil {
+		response.Fail(ctx, consts.CurdLoginFailCode, consts.CurdLoginFailMsg, nil)
 		return
 	}
 	log.Println("us:", us)
 	uc := utils.UserClaims{
-		Uid:       us.Uid,
+		Uid:       us.ID,
 		UserAgent: ctx.GetHeader("User-Agent"),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
@@ -92,21 +91,12 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	tokenString, err := utils.GenerateToken(&uc)
 	if err != nil {
-		ctx.JSON(http.StatusOK, ginx.Result{
-			Code: errs.UserInternalServerError,
-			Msg:  "系统异常",
-		})
+		response.ErrorSystem(ctx, "", nil)
 		log.Println(err)
 		return
 	}
 	ctx.Header("x-jwt-token", tokenString)
-	ctx.JSON(http.StatusOK, ginx.Result{
-		Code: http.StatusOK,
-		Msg:  "登录成功",
-		Data: gin.H{
-			"token": tokenString,
-		},
-	})
+	response.Success(ctx, consts.CurdStatusOkMsg, gin.H{"token": tokenString})
 }
 
 type Code2SessionReqParams struct {
@@ -124,7 +114,7 @@ type Code2SessionResponse struct {
 	ErrCode    int32  `json:"errcode"`
 }
 
-func (u *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2SessionResponse {
+func (h *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2SessionResponse {
 	url := "https://api.weixin.qq.com/sns/jscode2session?"
 	v, err := query.Values(reqParams)
 	if err != nil {
@@ -145,4 +135,45 @@ func (u *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2Sessi
 		return nil
 	}
 	return &data
+}
+
+type SignUpReq struct {
+	Mobile   string `json:"mobile"`
+	NickName string `json:"nick_name"`
+	Gender   string `json:"gender"`
+	Avatar   string `json:"avatar"`
+	OpenId   string `json:"openid"`
+}
+
+// 注册接口
+// @Tags 用户相关接口
+// @Summary 用户注册接口
+// @Description	用户注册接口
+// @Accept json
+// @Produce json
+// @Param signup body SignUpReq true "注册参数"
+// @Success 200 {object} ginx.Result "{"code":xxx,"data":{},"msg":"xxx"}"
+// @Router /users/signup [post]
+func (h *UserHandler) SignUp(ctx *gin.Context) {
+	var signUpReq SignUpReq
+	if err := ctx.Bind(&signUpReq); err != nil {
+		log.Println(err)
+		response.ErrorParam(ctx, nil)
+		return
+	}
+	err := h.svc.SignUp(ctx, domain.User{
+		Mobile:   signUpReq.Mobile,
+		NickName: signUpReq.NickName,
+		Gender:   signUpReq.Gender,
+		Avatar:   signUpReq.Avatar,
+		OpenID:   signUpReq.OpenId,
+	})
+	switch err {
+	case nil:
+		response.Success(ctx, consts.CurdRegisterOkMsg, nil)
+	case service.ErrDuplicateMobile:
+		response.Fail(ctx, consts.CurdRegisterFailCode, consts.CurdRegisterFailMsg+"，手机号冲突，请更换一个", nil)
+	default:
+		response.ErrorSystem(ctx, "", nil)
+	}
 }

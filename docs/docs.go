@@ -33,7 +33,7 @@ const docTemplate = `{
                 "tags": [
                     "用户相关接口"
                 ],
-                "summary": "用户登录注册接口",
+                "summary": "用户登录接口",
                 "parameters": [
                     {
                         "description": "微信登录的临时登录凭证",
@@ -42,6 +42,40 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/web.loginReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"code\":xxx,\"data\":{},\"msg\":\"xxx\"}",
+                        "schema": {
+                            "$ref": "#/definitions/ginx.Result"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/signup": {
+            "post": {
+                "description": "用户注册接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户相关接口"
+                ],
+                "summary": "用户注册接口",
+                "parameters": [
+                    {
+                        "description": "注册参数",
+                        "name": "signup",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/web.SignUpReq"
                         }
                     }
                 ],
@@ -65,6 +99,26 @@ const docTemplate = `{
                 },
                 "data": {},
                 "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "web.SignUpReq": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "mobile": {
+                    "type": "string"
+                },
+                "nick_name": {
+                    "type": "string"
+                },
+                "openid": {
                     "type": "string"
                 }
             }

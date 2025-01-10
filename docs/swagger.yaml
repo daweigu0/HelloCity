@@ -9,6 +9,19 @@ definitions:
       msg:
         type: string
     type: object
+  web.SignUpReq:
+    properties:
+      avatar:
+        type: string
+      gender:
+        type: string
+      mobile:
+        type: string
+      nick_name:
+        type: string
+      openid:
+        type: string
+    type: object
   web.loginReq:
     properties:
       code:
@@ -37,7 +50,29 @@ paths:
           description: '{"code":xxx,"data":{},"msg":"xxx"}'
           schema:
             $ref: '#/definitions/ginx.Result'
-      summary: 用户登录注册接口
+      summary: 用户登录接口
+      tags:
+      - 用户相关接口
+  /users/signup:
+    post:
+      consumes:
+      - application/json
+      description: 用户注册接口
+      parameters:
+      - description: 注册参数
+        in: body
+        name: signup
+        required: true
+        schema:
+          $ref: '#/definitions/web.SignUpReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code":xxx,"data":{},"msg":"xxx"}'
+          schema:
+            $ref: '#/definitions/ginx.Result'
+      summary: 用户注册接口
       tags:
       - 用户相关接口
 produces:
