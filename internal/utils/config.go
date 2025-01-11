@@ -7,7 +7,10 @@ import (
 	"runtime"
 )
 
-var configPath = path.Dir(getCurrentPath()+"/../") + "/config/"
+var (
+	configPath = path.Dir(getCurrentPath()+"/../") + "/config/"
+	Config     = CreateConfig("config")
+)
 
 func getCurrentPath() string {
 	_, filename, _, _ := runtime.Caller(0)
