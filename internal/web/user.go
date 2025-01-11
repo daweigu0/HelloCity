@@ -5,8 +5,10 @@ import (
 	"HelloCity/internal/global/consts"
 	"HelloCity/internal/service"
 	"HelloCity/internal/utils"
+	"HelloCity/internal/utils/check"
 	"HelloCity/internal/utils/response"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -71,9 +73,9 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 	us, err := h.svc.Login(ctx, code2SessionResponse.OpenId)
-	if err == service.ErrInvalidUser {
-		response.Fail(ctx, consts.CurdLoginFailCode, consts.CurdLoginFailMsg+",用户不存在，请注册", gin.H{
-			"openId": code2SessionResponse.OpenId,
+	if errors.Is(err, service.ErrInvalidUser) {
+		response.Fail(ctx, consts.CurdLoginFailCode, "用户不存在，请注册", gin.H{
+			"openid": code2SessionResponse.OpenId, //这个地方可能有安全问题，后续需要解决
 		})
 		return
 	}
@@ -140,7 +142,6 @@ func (h *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2Sessi
 type SignUpReq struct {
 	Mobile   string `json:"mobile"`
 	NickName string `json:"nick_name"`
-	Gender   string `json:"gender"`
 	Avatar   string `json:"avatar"`
 	OpenId   string `json:"openid"`
 }
@@ -161,10 +162,22 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		response.ErrorParam(ctx, nil)
 		return
 	}
+	if signUpReq.NickName == "" {
+		response.Fail(ctx, http.StatusBadRequest, "昵称不能为空", nil)
+		return
+	}
+	if !check.CNMobile(signUpReq.Mobile) {
+		response.Fail(ctx, http.StatusBadRequest, "手机号不正确", nil)
+		return
+	}
+	if !check.URL(signUpReq.Avatar) {
+		response.Fail(ctx, http.StatusBadRequest, "头像url不正确", nil)
+		return
+	}
+	//需要检查openid
 	err := h.svc.SignUp(ctx, domain.User{
 		Mobile:   signUpReq.Mobile,
 		NickName: signUpReq.NickName,
-		Gender:   signUpReq.Gender,
 		Avatar:   signUpReq.Avatar,
 		OpenID:   signUpReq.OpenId,
 	})
@@ -172,7 +185,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	case nil:
 		response.Success(ctx, consts.CurdRegisterOkMsg, nil)
 	case service.ErrDuplicateMobile:
-		response.Fail(ctx, consts.CurdRegisterFailCode, consts.CurdRegisterFailMsg+"，手机号冲突，请更换一个", nil)
+		response.Fail(ctx, consts.CurdRegisterFailCode, "手机号冲突，请更换一个", nil)
 	default:
 		response.ErrorSystem(ctx, "", nil)
 	}

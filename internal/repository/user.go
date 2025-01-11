@@ -26,8 +26,12 @@ func NewUserRepositoryHandler(dao dao.UserDao) *UserRepositoryHandler {
 
 func (*UserRepositoryHandler) toDomain(u dao.User) domain.User {
 	return domain.User{
-		ID:     u.ID,
-		OpenID: u.OpenID,
+		ID:       u.ID,
+		OpenID:   u.OpenID,
+		Mobile:   u.Mobile,
+		Avatar:   u.Avatar,
+		NickName: u.NickName,
+		Email:    u.Email,
 	}
 }
 
@@ -38,6 +42,7 @@ func (*UserRepositoryHandler) toEntity(u domain.User) dao.User {
 		Avatar:   u.Avatar,
 		NickName: u.NickName,
 		Gender:   u.Gender,
+		Email:    u.Email,
 	}
 }
 

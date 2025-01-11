@@ -5,6 +5,7 @@ type User struct {
 	OpenID   string
 	Mobile   string
 	NickName string
+	Email    string
 	Avatar   string
 	Gender   string
 }

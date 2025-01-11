@@ -37,7 +37,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "微信登录的临时登录凭证",
-                        "name": "code",
+                        "name": "login",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -107,9 +107,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "avatar": {
-                    "type": "string"
-                },
-                "gender": {
                     "type": "string"
                 },
                 "mobile": {

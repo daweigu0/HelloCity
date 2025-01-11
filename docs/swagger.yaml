@@ -13,8 +13,6 @@ definitions:
     properties:
       avatar:
         type: string
-      gender:
-        type: string
       mobile:
         type: string
       nick_name:
@@ -39,7 +37,7 @@ paths:
       parameters:
       - description: 微信登录的临时登录凭证
         in: body
-        name: code
+        name: login
         required: true
         schema:
           $ref: '#/definitions/web.loginReq'
