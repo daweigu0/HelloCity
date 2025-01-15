@@ -17,6 +17,7 @@ type UserDao interface {
 	Insert(ctx context.Context, user User) error
 	FindUserByOpenId(ctx context.Context, openId string) (User, error)
 	FindUserById(ctx context.Context, id uint64) (User, error)
+	Update(ctx context.Context, id uint64, user User) error
 }
 type GORMUserDao struct {
 	db *gorm.DB
@@ -51,8 +52,14 @@ func (dao *GORMUserDao) FindUserByOpenId(ctx context.Context, openId string) (Us
 
 func (dao *GORMUserDao) FindUserById(ctx context.Context, id uint64) (User, error) {
 	var user User
-	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&user).Omit("password").Error
 	return user, err
+}
+func (dao *GORMUserDao) Update(ctx context.Context, id uint64, user User) error {
+	time := time.Now()
+	user.UpdatedAt = time
+	err := dao.db.WithContext(ctx).Model(&user).Where("id=?", id).Updates(user).Error
+	return err
 }
 
 type User struct {
@@ -79,4 +86,6 @@ type User struct {
 	Signature      string    `gorm:"type:varchar(256);default:null" json:"signature"`
 	AboutMe        string    `gorm:"type:varchar(256);default:null" json:"about_me"`
 	Constellation  int8      `gorm:"type:tinyint;default:null" json:"constellation"`
+	Province       string    `gorm:"type:varchar(256);default:null" json:"province"`
+	City           string    `gorm:"type:varchar(256);default:null" json:"city"`
 }

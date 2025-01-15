@@ -89,6 +89,28 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/profile": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户相关接口"
+                ],
+                "summary": "用户界面接口",
+                "responses": {
+                    "200": {
+                        "description": "{\"code\":xxx,\"data\":{},\"msg\":\"xxx\"}",
+                        "schema": {
+                            "$ref": "#/definitions/ginx.Result"
+                        }
+                    }
+                }
+            }
+        },
         "/users/signup": {
             "post": {
                 "description": "用户注册接口",

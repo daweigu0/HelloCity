@@ -31,6 +31,8 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("login", h.Login)
 	ug.POST("signup", h.SignUp)
+	ug.POST("profile", h.Profile)
+	ug.POST("edit", h.Edit)
 }
 
 type loginReq struct {
@@ -189,4 +191,81 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	default:
 		response.ErrorSystem(ctx, "", nil)
 	}
+}
+
+// 用户界面接口
+// @Tags 用户相关接口
+// @Summary 用户界面接口
+// @Description
+// @Accept json
+// @Produce json
+// @Success 200 {object} ginx.Result "{"code":xxx,"data":{},"msg":"xxx"}"
+// @Router /users/profile [post]
+func (h *UserHandler) Profile(ctx *gin.Context) {
+	usClaims, err := ctx.MustGet("user").(utils.UserClaims)
+	if err == false {
+		log.Println("ctx中未存放user")
+		return
+	}
+	user, err1 := h.svc.Profile(ctx, usClaims.Uid)
+	if err1 != nil {
+		response.Fail(ctx, consts.CurdSelectFailCode, consts.CurdSelectFailMsg, nil)
+	}
+	type resp struct {
+		Id            uint64 `json:"id"`
+		UserName      string `json:"username"`
+		Avartar       string `json:"avartar"`
+		ThumbsCount   int64  `json:"thumbsCount"`
+		FansCount     int64  `json:"fansCount"`
+		FollowerCount int64  `json:"followerCount"`
+		Signature     string `json:"signature"`
+		Constellation int8   `json:"constellation"`
+		Province      string `json:"province"`
+		City          string `json:"city"`
+	}
+	Re := &resp{
+		Id:            user.ID,
+		UserName:      user.NickName,
+		Avartar:       user.Avatar,
+		ThumbsCount:   user.ThumbsCount,
+		FansCount:     user.FollowerCount,
+		FollowerCount: user.FollowerCount,
+		Signature:     user.Signature,
+		Constellation: user.Constellation,
+		Province:      user.Province,
+		City:          user.City,
+	}
+	response.Success(ctx, consts.CurdStatusOkMsg, Re)
+}
+func (h *UserHandler) Edit(ctx *gin.Context) {
+	uc, ok := ctx.MustGet("user").(utils.UserClaims)
+	if !ok {
+		log.Println("ctx 未找到用户")
+		return
+	}
+	type editReq struct {
+		Name          string `json:"name"`
+		Gender        string `json:"gender"`
+		Constellation int8   `json:"constellation"`
+		Province      string `json:"province"`
+		City          string `json:"city"`
+		Signature     string `json:"signature"`
+	}
+	var req editReq
+	if err := ctx.Bind(&req); err != nil {
+		response.ErrorParam(ctx, err)
+	}
+	err := h.svc.Edit(ctx, uc.Uid, domain.User{
+		NickName:      req.Name,
+		Gender:        req.Gender,
+		Constellation: req.Constellation,
+		Province:      req.Province,
+		City:          req.City,
+		Signature:     req.Signature,
+	})
+	if err != nil {
+		log.Println(err)
+		response.Fail(ctx, consts.CurdUpdateFailCode, consts.CurdUpdateFailMsg, nil)
+	}
+	response.Success(ctx, consts.CurdStatusOkMsg, nil)
 }

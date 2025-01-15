@@ -16,6 +16,8 @@ type UserService interface {
 	Login(ctx context.Context, openId string) (domain.User, error)
 	FindUserByID(ctx context.Context, id uint64) (domain.User, error)
 	SignUp(ctx context.Context, user domain.User) error
+	Profile(ctx context.Context, id uint64) (domain.User, error)
+	Edit(ctx context.Context, id uint64, user domain.User) error
 }
 type UserServiceHandler struct {
 	repo repository.UserRepository
@@ -39,4 +41,10 @@ func (svc *UserServiceHandler) FindUserByID(ctx context.Context, id uint64) (dom
 
 func (svc *UserServiceHandler) SignUp(ctx context.Context, user domain.User) error {
 	return svc.repo.Create(ctx, user)
+}
+func (svc *UserServiceHandler) Profile(ctx context.Context, id uint64) (domain.User, error) {
+	return svc.repo.FindById(ctx, id)
+}
+func (svc *UserServiceHandler) Edit(ctx context.Context, id uint64, user domain.User) error {
+	return svc.repo.Update(ctx, id, user)
 }
