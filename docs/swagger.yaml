@@ -25,10 +25,37 @@ definitions:
       code:
         type: string
     type: object
+  web.reqUploadToken:
+    properties:
+      file_name:
+        type: string
+    type: object
 info:
   contact: {}
   title: 你好同城后端API
 paths:
+  /files/upload_token:
+    post:
+      consumes:
+      - application/json
+      description: 文件上传token获取接口
+      parameters:
+      - description: 上传文件token获取参数
+        in: body
+        name: UploadToken
+        required: true
+        schema:
+          $ref: '#/definitions/web.reqUploadToken'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code":xxx,"data":{},"msg":"xxx"}'
+          schema:
+            $ref: '#/definitions/ginx.Result'
+      summary: 文件上传token获取接口
+      tags:
+      - 文件相关接口
   /users/login:
     post:
       consumes:

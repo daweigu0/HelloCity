@@ -21,6 +21,40 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/files/upload_token": {
+            "post": {
+                "description": "文件上传token获取接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件相关接口"
+                ],
+                "summary": "文件上传token获取接口",
+                "parameters": [
+                    {
+                        "description": "上传文件token获取参数",
+                        "name": "UploadToken",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/web.reqUploadToken"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"code\":xxx,\"data\":{},\"msg\":\"xxx\"}",
+                        "schema": {
+                            "$ref": "#/definitions/ginx.Result"
+                        }
+                    }
+                }
+            }
+        },
         "/users/login": {
             "post": {
                 "description": "登录成功返回的token放在响应的header的x-jwt-token里面，登录之后的后续访问需要带上token，放在请求的header里面的Authorization。",
@@ -124,6 +158,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "web.reqUploadToken": {
+            "type": "object",
+            "properties": {
+                "file_name": {
                     "type": "string"
                 }
             }

@@ -5,13 +5,16 @@ import (
 	"HelloCity/internal/repository"
 	"HelloCity/internal/repository/dao"
 	"HelloCity/internal/service"
+	"HelloCity/internal/service/oss/qiniu"
+	"HelloCity/internal/utils"
 	"HelloCity/internal/web"
-	"HelloCity/internal/web/middleware"
 	"HelloCity/ioc"
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"log"
 	"strings"
 	"time"
 )
@@ -30,7 +33,7 @@ func InitMiddlewares() []gin.HandlerFunc {
 			},
 			MaxAge: 12 * time.Hour,
 		}),
-		(&middleware.LoginJWTMiddlewareBuilder{}).CheckLogin(),
+		//(&middleware.LoginJWTMiddlewareBuilder{}).CheckLogin(),
 	}
 }
 
@@ -43,7 +46,11 @@ func InitWebServer() *gin.Engine {
 	userHandler := web.NewUserHandler(usSvc)
 	server.Use(InitMiddlewares()...)
 	userHandler.RegisterRoutes(server)
-
+	accessKey := utils.Config.GetString("oss.qiniu.accessKey")
+	secretKey := utils.Config.GetString("oss.qiniu.secretKey")
+	fileSvc := qiniu.NewService(accessKey, secretKey)
+	fileHandler := web.NewFileHandler(fileSvc)
+	fileHandler.RegisterRoutes(server)
 	return server
 }
 
@@ -53,5 +60,10 @@ func InitWebServer() *gin.Engine {
 // @schemes	http https
 func main() {
 	server := InitWebServer()
-	server.Run(":8080")
+	domain := utils.Config.GetString("nihaotongcheng.domain")
+	port := utils.Config.GetString("nihaotongcheng.port")
+	err := server.Run(fmt.Sprintf("%s:%s", domain, port))
+	if err != nil {
+		log.Panicf("服务器启动错误 %v\n", err)
+	}
 }

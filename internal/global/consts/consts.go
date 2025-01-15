@@ -87,4 +87,6 @@ const (
 	AuthDelOkMsg    string = "权限删除成功"
 	AuthDelFailCode int    = -400401
 	AuthDelFailMsg  string = "权限删除失败"
+
+	OkMsg = "success"
 )
