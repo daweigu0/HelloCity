@@ -3,8 +3,10 @@ package service
 import (
 	"HelloCity/internal/domain"
 	"HelloCity/internal/repository"
+	"HelloCity/internal/utils"
 	"context"
 	"errors"
+	"fmt"
 )
 
 var (
@@ -16,16 +18,23 @@ type UserService interface {
 	Login(ctx context.Context, openId string) (domain.User, error)
 	FindUserByID(ctx context.Context, id uint64) (domain.User, error)
 	SignUp(ctx context.Context, user domain.User) error
+	UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
 }
-type UserServiceHandler struct {
+type userService struct {
 	repo repository.UserRepository
 }
 
-func NewUserServiceHandler(repo repository.UserRepository) *UserServiceHandler {
-	return &UserServiceHandler{repo}
+func (svc *userService) UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error {
+	return svc.repo.UpdateNonZeroFields(ctx, user)
 }
 
-func (svc *UserServiceHandler) Login(ctx context.Context, openId string) (domain.User, error) {
+func NewUserService(repo repository.UserRepository) UserService {
+	return &userService{
+		repo: repo,
+	}
+}
+
+func (svc *userService) Login(ctx context.Context, openId string) (domain.User, error) {
 	u, err := svc.repo.FindByOpenId(ctx, openId)
 	if err == repository.ErrUserNotFound {
 		return domain.User{}, ErrInvalidUser
@@ -33,10 +42,13 @@ func (svc *UserServiceHandler) Login(ctx context.Context, openId string) (domain
 	return u, err
 }
 
-func (svc *UserServiceHandler) FindUserByID(ctx context.Context, id uint64) (domain.User, error) {
+func (svc *userService) FindUserByID(ctx context.Context, id uint64) (domain.User, error) {
 	return svc.repo.FindById(ctx, id)
 }
 
-func (svc *UserServiceHandler) SignUp(ctx context.Context, user domain.User) error {
+func (svc *userService) SignUp(ctx context.Context, user domain.User) error {
+	//上传用户头像
+	data, err := utils.Base64Decode(user.Avatar)
+	fmt.Println(data, err)
 	return svc.repo.Create(ctx, user)
 }

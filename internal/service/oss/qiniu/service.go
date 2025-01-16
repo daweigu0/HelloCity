@@ -1,9 +1,13 @@
 package qiniu
 
 import (
+	"HelloCity/internal/utils"
+	"bytes"
 	"context"
 	"errors"
 	"github.com/qiniu/go-sdk/v7/storagev2/credentials"
+	"github.com/qiniu/go-sdk/v7/storagev2/http_client"
+	"github.com/qiniu/go-sdk/v7/storagev2/uploader"
 	"github.com/qiniu/go-sdk/v7/storagev2/uptoken"
 	"time"
 )
@@ -16,6 +20,31 @@ type Service struct {
 	accessKey string
 	secretKey string
 }
+
+func (s *Service) UploadFile(data []byte) error {
+	mac := credentials.NewCredentials(s.accessKey, s.secretKey)
+	bucket := utils.Config.GetString("oss.qiniu.bucketName")
+	key := "github-x.png"
+	reader := bytes.NewReader(data)
+	uploadManager := uploader.NewUploadManager(&uploader.UploadManagerOptions{
+		Options: http_client.Options{
+			Credentials: mac,
+		},
+	})
+	err := uploadManager.UploadReader(context.Background(), reader, &uploader.ObjectOptions{
+		BucketName: bucket,
+		ObjectName: &key,
+		CustomVars: map[string]string{
+			"name": "github logo",
+		},
+		FileName: "",
+	}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type GetUploadTokenParam struct {
 	BucketName       string
 	CallBackUrl      string

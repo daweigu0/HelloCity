@@ -18,13 +18,19 @@ import (
 	"time"
 )
 
+var (
+	prefixSignup = "signup"
+)
+
 type UserHandler struct {
-	svc service.UserService
+	userSvc  service.UserService
+	tokenSvc service.TokenService
 }
 
-func NewUserHandler(svc service.UserService) *UserHandler {
+func NewUserHandler(userSvc service.UserService, tokenSvc service.TokenService) *UserHandler {
 	return &UserHandler{
-		svc: svc,
+		userSvc:  userSvc,
+		tokenSvc: tokenSvc,
 	}
 }
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
@@ -72,10 +78,17 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		}
 		return
 	}
-	us, err := h.svc.Login(ctx, code2SessionResponse.OpenId)
+	us, err := h.userSvc.Login(ctx, code2SessionResponse.OpenId)
 	if errors.Is(err, service.ErrInvalidUser) {
+		signupToken := utils.RandStr(16)
+		err = h.tokenSvc.Set(ctx, prefixSignup, signupToken, us.OpenID)
+		if err != nil {
+			log.Printf("redis缓存数据错误 %v\n", err)
+			response.ErrorSystem(ctx, "", nil)
+			return
+		}
 		response.Fail(ctx, consts.CurdLoginFailCode, "用户不存在，请注册", gin.H{
-			"openid": code2SessionResponse.OpenId, //这个地方可能有安全问题，后续需要解决
+			"signup_token": signupToken, //这个地方可能有安全问题，后续需要解决
 		})
 		return
 	}
@@ -110,7 +123,7 @@ type Code2SessionReqParams struct {
 
 type Code2SessionResponse struct {
 	SessionKey string `json:"session_key"`
-	UnionId    string `json:"Unionid"`
+	UnionId    string `json:"unionid"`
 	ErrMsg     string `json:"errmsg"`
 	OpenId     string `json:"openid"`
 	ErrCode    int32  `json:"errcode"`
@@ -140,10 +153,10 @@ func (h *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2Sessi
 }
 
 type SignUpReq struct {
-	Mobile   string `json:"mobile"`
-	NickName string `json:"nick_name"`
-	Avatar   string `json:"avatar"`
-	OpenId   string `json:"openid"`
+	Mobile      string `json:"mobile"`
+	NickName    string `json:"nick_name"`
+	Avatar      string `json:"avatar"`
+	SignupToken string `json:"signup_token"`
 }
 
 // 注册接口
@@ -174,12 +187,22 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		response.Fail(ctx, http.StatusBadRequest, "头像url不正确", nil)
 		return
 	}
+	if signUpReq.SignupToken == "" {
+		response.Fail(ctx, http.StatusBadRequest, "signup_token不能为空", nil)
+		return
+	}
+	openid, err := h.tokenSvc.Get(ctx, prefixSignup, signUpReq.SignupToken)
+	if err != nil {
+		log.Printf("从redis中获取值错误 %v\n", err)
+		response.Fail(ctx, http.StatusBadRequest, "signup_token错误", nil)
+		return
+	}
 	//需要检查openid
-	err := h.svc.SignUp(ctx, domain.User{
+	err = h.userSvc.SignUp(ctx, domain.User{
 		Mobile:   signUpReq.Mobile,
 		NickName: signUpReq.NickName,
 		Avatar:   signUpReq.Avatar,
-		OpenID:   signUpReq.OpenId,
+		OpenID:   openid,
 	})
 	switch err {
 	case nil:

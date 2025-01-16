@@ -15,9 +15,19 @@ type UserRepository interface {
 	FindByOpenId(ctx context.Context, openId string) (domain.User, error)
 	FindById(ctx context.Context, uid uint64) (domain.User, error)
 	Create(ctx context.Context, user domain.User) error
+	UpdateNonZeroFields(ctx context.Context, user domain.User) error
 }
 type UserRepositoryHandler struct {
 	dao dao.UserDao
+}
+
+func (repo *UserRepositoryHandler) UpdateNonZeroFields(ctx context.Context, user domain.User) error {
+	// 更新 DB 之后，删除
+	err := repo.dao.UpdateById(ctx, repo.toEntity(user))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewUserRepositoryHandler(dao dao.UserDao) *UserRepositoryHandler {
