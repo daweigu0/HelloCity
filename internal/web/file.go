@@ -11,8 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	uuid2 "github.com/google/uuid"
 	"log"
-	"path"
-	"strings"
 )
 
 type FileHandler struct {
@@ -36,7 +34,6 @@ type myPutRet struct {
 	Hash   string
 	Fsize  int
 	Bucket string
-	Name   string
 }
 
 // CallBack 这个回调函数需在公网服务器上测，需完善
@@ -50,7 +47,8 @@ func (h *FileHandler) CallBack(ctx *gin.Context) {
 }
 
 type reqUploadToken struct {
-	FileName string `json:"file_name"`
+	FileType string `json:"file_type"`
+	FileExt  string `json:"file_ext"`
 }
 
 // 文件接口
@@ -68,14 +66,22 @@ func (h *FileHandler) UploadToken(ctx *gin.Context) {
 		response.ErrorParam(ctx, nil)
 		return
 	}
-	fmt.Println(req.FileName)
-	req.FileName = strings.ToLower(req.FileName)
-	ext := path.Ext(req.FileName)
-	if ext == "" {
-		response.Fail(ctx, consts.CaptchaGetParamsInvalidCode, "缺少文件拓展名", nil)
+	fileTypes := []string{"image", "video", "audio"}
+	legalType := false
+	for _, fileType := range fileTypes {
+		if fileType == req.FileType {
+			legalType = true
+			break
+		}
+	}
+	if !legalType {
+		response.Fail(ctx, consts.ValidatorParamsCheckFailCode, "文件类型不对", nil)
 		return
 	}
-	fileType := utils.GetFileType(ext)
+	if req.FileExt == "" {
+		response.Fail(ctx, consts.ValidatorParamsCheckFailCode, "文件拓展名为空", nil)
+		return
+	}
 	user := ctx.Value("user").(domain.User)
 	uuid, err := uuid2.NewUUID()
 	if err != nil {
@@ -83,11 +89,11 @@ func (h *FileHandler) UploadToken(ctx *gin.Context) {
 		response.ErrorSystem(ctx, "", nil)
 		return
 	}
-	fileName := uuid.String() + ext
-	saveKey := fmt.Sprintf("%s/%d/%s", fileType, user.ID, fileName)
-	bucketName := "nihaotongcheng"
+	fileName := uuid.String() + "." + req.FileExt
+	saveKey := fmt.Sprintf("%s/%d/%s", req.FileType, user.ID, fileName)
+	bucketName := utils.Config.GetString("oss.qiniu.bucketName")
 	callBackUrl := utils.Config.GetString("nihaotongcheng.domain") + "files/callback"
-	callBackBody := `{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)"}`
+	callBackBody := `{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)"}`
 	callBackBodyType := "application/json"
 	param := qiniu.NewGetUploadTokenParam(bucketName, callBackUrl, callBackBody, callBackBodyType, saveKey)
 	token, err := h.svc.GetUploadToken(param)
@@ -98,6 +104,5 @@ func (h *FileHandler) UploadToken(ctx *gin.Context) {
 	}
 	response.Success(ctx, consts.OkMsg, gin.H{
 		"upload_token": token,
-		"file_name":    fileName,
 	})
 }

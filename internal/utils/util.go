@@ -2,21 +2,21 @@ package utils
 
 import (
 	"encoding/base64"
+	"github.com/h2non/filetype"
 	"math/rand"
 	"time"
 	"unsafe"
 )
 
-// GetFileType 根据文件的扩展名获取文件对应的类型
-func GetFileType(ext string) string {
-	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp", ".svg", ".heif", ".heic":
+// GetFileType 根据文件获取文件对应的文件类型
+func GetFileType(buf []byte) string {
+	if filetype.IsImage(buf) == true {
 		return "image"
-	case ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".3gp", ".3gpp", ".mpeg", ".mpg":
+	} else if filetype.IsVideo(buf) == true {
 		return "video"
-	case ".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma", ".m4a", ".opus", ".aiff", ".aif":
+	} else if filetype.IsAudio(buf) == true {
 		return "audio"
-	default:
+	} else {
 		return "unknown"
 	}
 }

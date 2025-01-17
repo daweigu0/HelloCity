@@ -4,6 +4,7 @@ import (
 	"HelloCity/internal/domain"
 	"HelloCity/internal/global/consts"
 	"HelloCity/internal/service"
+	"HelloCity/internal/service/oss"
 	"HelloCity/internal/utils"
 	"HelloCity/internal/utils/check"
 	"HelloCity/internal/utils/response"
@@ -25,6 +26,7 @@ var (
 type UserHandler struct {
 	userSvc  service.UserService
 	tokenSvc service.TokenService
+	ossSvc   oss.Service
 }
 
 func NewUserHandler(userSvc service.UserService, tokenSvc service.TokenService) *UserHandler {
@@ -81,7 +83,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	us, err := h.userSvc.Login(ctx, code2SessionResponse.OpenId)
 	if errors.Is(err, service.ErrInvalidUser) {
 		signupToken := utils.RandStr(16)
-		err = h.tokenSvc.Set(ctx, prefixSignup, signupToken, us.OpenID)
+		err = h.tokenSvc.Set(ctx, prefixSignup, signupToken, code2SessionResponse.OpenId)
 		if err != nil {
 			log.Printf("redis缓存数据错误 %v\n", err)
 			response.ErrorSystem(ctx, "", nil)
@@ -155,7 +157,6 @@ func (h *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2Sessi
 type SignUpReq struct {
 	Mobile      string `json:"mobile"`
 	NickName    string `json:"nick_name"`
-	Avatar      string `json:"avatar"`
 	SignupToken string `json:"signup_token"`
 }
 
@@ -183,27 +184,57 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		response.Fail(ctx, http.StatusBadRequest, "手机号不正确", nil)
 		return
 	}
-	if !check.URL(signUpReq.Avatar) {
-		response.Fail(ctx, http.StatusBadRequest, "头像url不正确", nil)
-		return
-	}
 	if signUpReq.SignupToken == "" {
 		response.Fail(ctx, http.StatusBadRequest, "signup_token不能为空", nil)
 		return
 	}
 	openid, err := h.tokenSvc.Get(ctx, prefixSignup, signUpReq.SignupToken)
+	fmt.Println("openid:", openid)
 	if err != nil {
 		log.Printf("从redis中获取值错误 %v\n", err)
 		response.Fail(ctx, http.StatusBadRequest, "signup_token错误", nil)
 		return
 	}
-	//需要检查openid
 	err = h.userSvc.SignUp(ctx, domain.User{
 		Mobile:   signUpReq.Mobile,
 		NickName: signUpReq.NickName,
-		Avatar:   signUpReq.Avatar,
 		OpenID:   openid,
 	})
+	//if err == nil { //用户头像的上传是否可以优化？
+	//	avatarData, err := utils.Base64Decode(signUpReq.Avatar)
+	//	if err != nil {
+	//		log.Printf("头像解码错误 %v\n", err)
+	//		response.Fail(ctx, http.StatusBadRequest, "头像解码错误", nil)
+	//		return
+	//	}
+	//	uuid, err := uuid2.NewUUID()
+	//	if err != nil {
+	//		log.Printf("uuid生成错误 %v\n", err)
+	//		response.ErrorSystem(ctx, "", nil)
+	//		return
+	//	}
+	//	fileType := utils.GetFileType(avatarData)
+	//	fileName := uuid.String() + "/" + fileType
+	//	u, err := h.userSvc.FindUserByOpenID(ctx, openid)
+	//	if err != nil {
+	//		log.Printf("根据id查询用户错误 %v\n", err)
+	//		response.Fail(ctx, http.StatusBadRequest, "头像上传失败", nil)
+	//		return
+	//	}
+	//	avatar, err := h.ossSvc.UploadFile(bytes.NewReader(avatarData), fileName, fileType, u.ID)
+	//	if err != nil {
+	//		log.Printf("头像上传错误 %v\n", err)
+	//		response.Fail(ctx, http.StatusBadRequest, "头像上传失败", nil)
+	//		return
+	//	}
+	//	u.Avatar = avatar
+	//	err = h.userSvc.UpdateNonSensitiveInfo(ctx, u)
+	//	if err != nil {
+	//		log.Printf("更新用户头像错误 %v\n", err)
+	//		response.Fail(ctx, http.StatusBadRequest, "头像上传失败", nil)
+	//		return
+	//	}
+	//}
 	switch err {
 	case nil:
 		response.Success(ctx, consts.CurdRegisterOkMsg, nil)

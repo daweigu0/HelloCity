@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -22,4 +23,9 @@ func TestBase64Decode(t *testing.T) {
 		t.Fail()
 		return
 	}
+}
+
+func TestGetFileTypeByFileContent(t *testing.T) {
+	file, _ := ioutil.ReadFile(`C:\Users\l1768\Desktop\图片+视频\IMG_0931(20200127-163154).JPG`)
+	GetFileTypeByFileContent(file)
 }

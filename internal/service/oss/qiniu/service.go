@@ -2,18 +2,21 @@ package qiniu
 
 import (
 	"HelloCity/internal/utils"
-	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/qiniu/go-sdk/v7/storagev2/credentials"
 	"github.com/qiniu/go-sdk/v7/storagev2/http_client"
 	"github.com/qiniu/go-sdk/v7/storagev2/uploader"
 	"github.com/qiniu/go-sdk/v7/storagev2/uptoken"
+	"io"
+	"path"
 	"time"
 )
 
 var (
-	ErrParamNotMatch = errors.New("参数类型不匹配")
+	ErrParamNotMatch  = errors.New("参数类型不匹配")
+	ErrFileUploadFail = errors.New("文件上传失败")
 )
 
 type Service struct {
@@ -21,28 +24,37 @@ type Service struct {
 	secretKey string
 }
 
-func (s *Service) UploadFile(data []byte) error {
+func (s *Service) UploadFile(reader io.Reader, fileName, fileType string, uid uint64) (string, error) {
+	// 自定义返回值结构体
+	type MyPutRet struct {
+		Key    string
+		Hash   string
+		Fsize  int
+		Bucket string
+	}
 	mac := credentials.NewCredentials(s.accessKey, s.secretKey)
-	bucket := utils.Config.GetString("oss.qiniu.bucketName")
-	key := "github-x.png"
-	reader := bytes.NewReader(data)
+	bucketName := utils.Config.GetString("oss.qiniu.bucketName")
+	key := fmt.Sprintf("%s/%d/%s", fileType, uid, path.Base(fileName))
 	uploadManager := uploader.NewUploadManager(&uploader.UploadManagerOptions{
 		Options: http_client.Options{
 			Credentials: mac,
 		},
 	})
-	err := uploadManager.UploadReader(context.Background(), reader, &uploader.ObjectOptions{
-		BucketName: bucket,
-		ObjectName: &key,
-		CustomVars: map[string]string{
-			"name": "github logo",
-		},
-		FileName: "",
-	}, nil)
+	putPolicy, err := uptoken.NewPutPolicy(bucketName, time.Now().Add(1*time.Hour))
 	if err != nil {
-		return err
+		return "", ErrFileUploadFail
 	}
-	return nil
+	var ret MyPutRet
+	putPolicy.SetReturnBody(`{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)"`)
+	err = uploadManager.UploadReader(context.Background(), reader, &uploader.ObjectOptions{
+		BucketName: bucketName,
+		ObjectName: &key,
+		FileName:   fileName,
+	}, &ret)
+	if err != nil {
+		return "", ErrFileUploadFail
+	}
+	return ret.Key, nil
 }
 
 type GetUploadTokenParam struct {

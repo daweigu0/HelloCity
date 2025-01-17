@@ -20,7 +20,6 @@ type RedisTokenCache struct {
 
 func (c *RedisTokenCache) Get(ctx context.Context, prefix, key string) (string, error) {
 	res, err := c.cmd.Get(ctx, c.key(prefix, key)).Result()
-	fmt.Println(res)
 	if err != nil {
 		return "", err
 	}
@@ -28,11 +27,10 @@ func (c *RedisTokenCache) Get(ctx context.Context, prefix, key string) (string, 
 }
 
 func (c *RedisTokenCache) Del(ctx context.Context, prefix, key string) error {
-	res, err := c.cmd.Del(ctx, prefix, key).Result()
+	_, err := c.cmd.Del(ctx, prefix, key).Result()
 	if err != nil {
 		return err
 	}
-	fmt.Println(res)
 	return nil
 }
 

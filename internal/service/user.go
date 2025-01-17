@@ -3,10 +3,8 @@ package service
 import (
 	"HelloCity/internal/domain"
 	"HelloCity/internal/repository"
-	"HelloCity/internal/utils"
 	"context"
 	"errors"
-	"fmt"
 )
 
 var (
@@ -17,11 +15,16 @@ var (
 type UserService interface {
 	Login(ctx context.Context, openId string) (domain.User, error)
 	FindUserByID(ctx context.Context, id uint64) (domain.User, error)
+	FindUserByOpenID(ctx context.Context, openId string) (domain.User, error)
 	SignUp(ctx context.Context, user domain.User) error
 	UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
 }
 type userService struct {
 	repo repository.UserRepository
+}
+
+func (svc *userService) FindUserByOpenID(ctx context.Context, openId string) (domain.User, error) {
+	return svc.repo.FindByOpenId(ctx, openId)
 }
 
 func (svc *userService) UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error {
@@ -47,8 +50,5 @@ func (svc *userService) FindUserByID(ctx context.Context, id uint64) (domain.Use
 }
 
 func (svc *userService) SignUp(ctx context.Context, user domain.User) error {
-	//上传用户头像
-	data, err := utils.Base64Decode(user.Avatar)
-	fmt.Println(data, err)
 	return svc.repo.Create(ctx, user)
 }
