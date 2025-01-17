@@ -9,6 +9,7 @@ import (
 	"HelloCity/internal/service/oss/qiniu"
 	"HelloCity/internal/utils"
 	"HelloCity/internal/web"
+	"HelloCity/internal/web/middleware"
 	"HelloCity/ioc"
 	"fmt"
 	"github.com/gin-contrib/cors"
@@ -34,7 +35,7 @@ func InitMiddlewares() []gin.HandlerFunc {
 			},
 			MaxAge: 12 * time.Hour,
 		}),
-		//(&middleware.LoginJWTMiddlewareBuilder{}).CheckLogin(),
+		(&middleware.LoginJWTMiddlewareBuilder{}).CheckLogin(),
 	}
 }
 
