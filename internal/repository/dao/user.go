@@ -18,9 +18,23 @@ type UserDao interface {
 	FindUserByOpenId(ctx context.Context, openId string) (User, error)
 	FindUserById(ctx context.Context, id uint64) (User, error)
 	Update(ctx context.Context, id uint64, user User) error
+	UpdateById(ctx context.Context, entity User) error
 }
 type GORMUserDao struct {
 	db *gorm.DB
+}
+
+func (dao *GORMUserDao) UpdateById(ctx context.Context, entity User) error {
+	// 这种写法依赖于 GORM 的零值和主键更新特性
+	// Update 非零值 WHERE id = ?
+	//return dao.db.WithContext(ctx).Updates(&entity).Error
+	return dao.db.WithContext(ctx).Model(&entity).Where("id = ?", entity.ID).
+		Updates(map[string]any{
+			"updated_at": time.Now(),
+			"nick_name":  entity.NickName,
+			"avatar":     entity.Avatar,
+			"gender":     entity.Gender,
+		}).Error
 }
 
 func NewUserDAO(db *gorm.DB) *GORMUserDao {
@@ -56,8 +70,7 @@ func (dao *GORMUserDao) FindUserById(ctx context.Context, id uint64) (User, erro
 	return user, err
 }
 func (dao *GORMUserDao) Update(ctx context.Context, id uint64, user User) error {
-	time := time.Now()
-	user.UpdatedAt = time
+	user.UpdatedAt = time.Now()
 	err := dao.db.WithContext(ctx).Model(&user).Where("id=?", id).Updates(user).Error
 	return err
 }

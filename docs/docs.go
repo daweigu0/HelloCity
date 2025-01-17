@@ -162,16 +162,13 @@ const docTemplate = `{
         "web.SignUpReq": {
             "type": "object",
             "properties": {
-                "avatar": {
-                    "type": "string"
-                },
                 "mobile": {
                     "type": "string"
                 },
                 "nick_name": {
                     "type": "string"
                 },
-                "openid": {
+                "signup_token": {
                     "type": "string"
                 }
             }
@@ -187,7 +184,10 @@ const docTemplate = `{
         "web.reqUploadToken": {
             "type": "object",
             "properties": {
-                "file_name": {
+                "file_ext": {
+                    "type": "string"
+                },
+                "file_type": {
                     "type": "string"
                 }
             }

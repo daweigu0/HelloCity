@@ -11,13 +11,11 @@ definitions:
     type: object
   web.SignUpReq:
     properties:
-      avatar:
-        type: string
       mobile:
         type: string
       nick_name:
         type: string
-      openid:
+      signup_token:
         type: string
     type: object
   web.loginReq:
@@ -27,7 +25,9 @@ definitions:
     type: object
   web.reqUploadToken:
     properties:
-      file_name:
+      file_ext:
+        type: string
+      file_type:
         type: string
     type: object
 info:

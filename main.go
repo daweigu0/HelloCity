@@ -3,6 +3,7 @@ package main
 import (
 	_ "HelloCity/docs"
 	"HelloCity/internal/repository"
+	"HelloCity/internal/repository/cache"
 	"HelloCity/internal/repository/dao"
 	"HelloCity/internal/service"
 	"HelloCity/internal/service/oss/qiniu"
@@ -42,8 +43,11 @@ func InitWebServer() *gin.Engine {
 	server.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	usDao := dao.NewUserDAO(ioc.InitDB())
 	usRepo := repository.NewUserRepositoryHandler(usDao)
-	usSvc := service.NewUserServiceHandler(usRepo)
-	userHandler := web.NewUserHandler(usSvc)
+	usSvc := service.NewUserService(usRepo)
+	tkCache := cache.NewTokenCache(ioc.InitRedis(), time.Minute*5)
+	tkRepo := repository.NewTokenCachedRepository(tkCache)
+	tkSvc := service.NewTokenService(tkRepo)
+	userHandler := web.NewUserHandler(usSvc, tkSvc)
 	server.Use(InitMiddlewares()...)
 	userHandler.RegisterRoutes(server)
 	accessKey := utils.Config.GetString("oss.qiniu.accessKey")
