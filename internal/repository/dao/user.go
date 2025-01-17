@@ -37,7 +37,7 @@ func (dao *GORMUserDao) UpdateById(ctx context.Context, entity User) error {
 		}).Error
 }
 
-func NewUserDAO(db *gorm.DB) *GORMUserDao {
+func NewUserDAO(db *gorm.DB) UserDao {
 	return &GORMUserDao{
 		db: db,
 	}

@@ -31,7 +31,7 @@ func (repo *UserRepositoryHandler) UpdateNonZeroFields(ctx context.Context, user
 	return nil
 }
 
-func NewUserRepositoryHandler(dao dao.UserDao) *UserRepositoryHandler {
+func NewUserRepositoryHandler(dao dao.UserDao) UserRepository {
 	return &UserRepositoryHandler{dao: dao}
 }
 

@@ -29,10 +29,11 @@ type UserHandler struct {
 	ossSvc   oss.Service
 }
 
-func NewUserHandler(userSvc service.UserService, tokenSvc service.TokenService) *UserHandler {
+func NewUserHandler(userSvc service.UserService, tokenSvc service.TokenService, ossSvc oss.Service) *UserHandler {
 	return &UserHandler{
 		userSvc:  userSvc,
 		tokenSvc: tokenSvc,
+		ossSvc:   ossSvc,
 	}
 }
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
@@ -261,7 +262,7 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 		log.Println("ctx中未存放user")
 		return
 	}
-	user, err1 := h.svc.Profile(ctx, usClaims.Uid)
+	user, err1 := h.userSvc.Profile(ctx, usClaims.Uid)
 	if err1 != nil {
 		response.Fail(ctx, consts.CurdSelectFailCode, consts.CurdSelectFailMsg, nil)
 	}
@@ -309,7 +310,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	if err := ctx.Bind(&req); err != nil {
 		response.ErrorParam(ctx, err)
 	}
-	err := h.svc.Edit(ctx, uc.Uid, domain.User{
+	err := h.userSvc.Edit(ctx, uc.Uid, domain.User{
 		NickName:      req.Name,
 		Gender:        req.Gender,
 		Constellation: req.Constellation,
