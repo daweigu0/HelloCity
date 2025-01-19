@@ -5,15 +5,14 @@ import (
 	"HelloCity/internal/global/consts"
 	"HelloCity/internal/service"
 	"HelloCity/internal/service/oss"
+	"HelloCity/internal/service/wechat"
 	"HelloCity/internal/utils"
 	"HelloCity/internal/utils/check"
 	"HelloCity/internal/utils/response"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/go-querystring/query"
 	"log"
 	"net/http"
 	"time"
@@ -24,16 +23,22 @@ var (
 )
 
 type UserHandler struct {
-	userSvc  service.UserService
-	tokenSvc service.TokenService
-	ossSvc   oss.Service
+	userSvc   service.UserService
+	tokenSvc  service.TokenService
+	ossSvc    oss.Service
+	wechatSvc wechat.Service
 }
 
-func NewUserHandler(userSvc service.UserService, tokenSvc service.TokenService, ossSvc oss.Service) *UserHandler {
+func NewUserHandler(userSvc service.UserService,
+	tokenSvc service.TokenService,
+	ossSvc oss.Service,
+	wechatSvc wechat.Service,
+) *UserHandler {
 	return &UserHandler{
-		userSvc:  userSvc,
-		tokenSvc: tokenSvc,
-		ossSvc:   ossSvc,
+		userSvc:   userSvc,
+		tokenSvc:  tokenSvc,
+		ossSvc:    ossSvc,
+		wechatSvc: wechatSvc,
 	}
 }
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
@@ -63,30 +68,16 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		response.ErrorParam(ctx, err)
 		return
 	}
-	viper := utils.CreateConfig("config")
-	prefix := "wechat."
-	appid := viper.GetString(prefix + "appid")
-	secret := viper.GetString(prefix + "secret")
-	code2SessionReqParams := Code2SessionReqParams{
-		JsCode:    req.Code,
-		Appid:     appid,
-		Secret:    secret,
-		GrantType: "authorization_code",
-	}
-	code2SessionResponse := h.code2Session(&code2SessionReqParams)
-	if code2SessionResponse == nil || code2SessionResponse.ErrCode != 0 {
+	_, openid, _, err := h.wechatSvc.Login(ctx, req.Code)
+	if err != nil {
+		log.Printf("访问微信code2session接口错误 %v", err)
 		response.Fail(ctx, consts.CurdLoginFailCode, consts.CurdLoginFailMsg, nil)
-		if code2SessionResponse != nil {
-			log.Println(fmt.Printf("请求微信code2Session接口失败，错误码：%d", code2SessionResponse.ErrCode))
-		} else {
-			log.Println("请求微信code2Session接口失败")
-		}
 		return
 	}
-	us, err := h.userSvc.Login(ctx, code2SessionResponse.OpenId)
+	us, err := h.userSvc.Login(ctx, openid)
 	if errors.Is(err, service.ErrInvalidUser) {
 		signupToken := utils.RandStr(16)
-		err = h.tokenSvc.Set(ctx, prefixSignup, signupToken, code2SessionResponse.OpenId)
+		err = h.tokenSvc.Set(ctx, prefixSignup, signupToken, openid)
 		if err != nil {
 			log.Printf("redis缓存数据错误 %v\n", err)
 			response.ErrorSystem(ctx, "", nil)
@@ -117,44 +108,6 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	}
 	ctx.Header("x-jwt-token", tokenString)
 	response.Success(ctx, consts.CurdStatusOkMsg, gin.H{"token": tokenString})
-}
-
-type Code2SessionReqParams struct {
-	Appid     string `url:"appid"`
-	Secret    string `url:"secret"`
-	JsCode    string `url:"js_code"`
-	GrantType string `url:"grant_type"`
-}
-
-type Code2SessionResponse struct {
-	SessionKey string `json:"session_key"`
-	UnionId    string `json:"unionid"`
-	ErrMsg     string `json:"errmsg"`
-	OpenId     string `json:"openid"`
-	ErrCode    int32  `json:"errcode"`
-}
-
-func (h *UserHandler) code2Session(reqParams *Code2SessionReqParams) *Code2SessionResponse {
-	url := "https://api.weixin.qq.com/sns/jscode2session?"
-	v, err := query.Values(reqParams)
-	if err != nil {
-		return nil
-	}
-	url += v.Encode()
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Println(fmt.Sprintf("请求code2Session接口失败，%v", err))
-		return nil
-	}
-	defer resp.Body.Close() // 确保在函数退出时关闭响应体
-	var data Code2SessionResponse
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&data)
-	if err != nil {
-		log.Println(fmt.Sprintf("解析json数据错误，%v", err))
-		return nil
-	}
-	return &data
 }
 
 type SignUpReq struct {
@@ -248,9 +201,9 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	}
 }
 
-// 用户界面接口
+// 用户信息接口
 // @Tags 用户相关接口
-// @Summary 用户界面接口
+// @Summary 用户信息接口
 // @Description
 // @Accept json
 // @Produce json
@@ -292,19 +245,30 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	}
 	response.Success(ctx, consts.CurdStatusOkMsg, Re)
 }
+
+type editReq struct {
+	Name          string `json:"name"`
+	Gender        string `json:"gender"`
+	Constellation int8   `json:"constellation"`
+	Province      string `json:"province"`
+	City          string `json:"city"`
+	Signature     string `json:"signature"`
+}
+
+// 用户信息更新接口
+// @Tags 用户相关接口
+// @Summary 用户信息更新接口
+// @Description
+// @Accept json
+// @Produce json
+// @Param edit body editReq true "用户信息更新参数"
+// @Success 200 {object} ginx.Result "{"code":xxx,"data":{},"msg":"xxx"}"
+// @Router /users/profile [post]
 func (h *UserHandler) Edit(ctx *gin.Context) {
 	uc, ok := ctx.MustGet("user").(utils.UserClaims)
 	if !ok {
 		log.Println("ctx 未找到用户")
 		return
-	}
-	type editReq struct {
-		Name          string `json:"name"`
-		Gender        string `json:"gender"`
-		Constellation int8   `json:"constellation"`
-		Province      string `json:"province"`
-		City          string `json:"city"`
-		Signature     string `json:"signature"`
 	}
 	var req editReq
 	if err := ctx.Bind(&req); err != nil {

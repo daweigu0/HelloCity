@@ -102,7 +102,7 @@ func (h *FileHandler) UploadToken(ctx *gin.Context) {
 		response.ErrorSystem(ctx, "", nil)
 		return
 	}
-	response.Success(ctx, consts.OkMsg, gin.H{
+	response.Success(ctx, consts.CurdStatusOkMsg, gin.H{
 		"upload_token": token,
 	})
 }

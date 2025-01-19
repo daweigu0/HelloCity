@@ -18,6 +18,21 @@ definitions:
       signup_token:
         type: string
     type: object
+  web.editReq:
+    properties:
+      city:
+        type: string
+      constellation:
+        type: integer
+      gender:
+        type: string
+      name:
+        type: string
+      province:
+        type: string
+      signature:
+        type: string
+    type: object
   web.loginReq:
     properties:
       code:
@@ -82,6 +97,13 @@ paths:
     post:
       consumes:
       - application/json
+      parameters:
+      - description: 用户信息更新参数
+        in: body
+        name: edit
+        required: true
+        schema:
+          $ref: '#/definitions/web.editReq'
       produces:
       - application/json
       responses:
@@ -89,7 +111,7 @@ paths:
           description: '{"code":xxx,"data":{},"msg":"xxx"}'
           schema:
             $ref: '#/definitions/ginx.Result'
-      summary: 用户界面接口
+      summary: 用户信息更新接口
       tags:
       - 用户相关接口
   /users/signup:

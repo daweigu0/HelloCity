@@ -7,6 +7,7 @@ import (
 	"HelloCity/internal/repository/cache"
 	"HelloCity/internal/repository/dao"
 	"HelloCity/internal/service"
+	"HelloCity/internal/service/wechat/power_wechat"
 	"HelloCity/internal/web"
 	"HelloCity/ioc"
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,8 @@ var ProviderSet = wire.NewSet(
 	ioc.InitRedis,
 	ioc.InitWebServer,
 	ioc.NewTimeDuration,
+	ioc.NewWechatService,
+	power_wechat.NewService,
 )
 
 func InitWebServer() *gin.Engine {

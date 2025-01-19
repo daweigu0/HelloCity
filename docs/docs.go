@@ -100,7 +100,18 @@ const docTemplate = `{
                 "tags": [
                     "用户相关接口"
                 ],
-                "summary": "用户界面接口",
+                "summary": "用户信息更新接口",
+                "parameters": [
+                    {
+                        "description": "用户信息更新参数",
+                        "name": "edit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/web.editReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "{\"code\":xxx,\"data\":{},\"msg\":\"xxx\"}",
@@ -169,6 +180,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "signup_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "web.editReq": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "constellation": {
+                    "type": "integer"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "province": {
+                    "type": "string"
+                },
+                "signature": {
                     "type": "string"
                 }
             }
